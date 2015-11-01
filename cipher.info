@@ -1,0 +1,5 @@
+name = Shift Cipher
+description = A super handy module that shifts letters within a text string by a user determined integer value
+package = Code Review
+core = 7.x
+files[] = cipher.module
