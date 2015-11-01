@@ -1,0 +1,144 @@
+<?php
+// Class project, a simple module that shifts letters of user input
+function cipher_menu()
+{
+	$items = array();
+	$items['cipher_input_page'] = array(
+			'title' => 'Cipher',
+			'page callback' => 'drupal_get_form',
+			'page arguments' => array('cipher_form'),
+			'access callback' => TRUE,
+			'type' => MENU_NORMAL_ITEM,
+	);
+	$items['cipher_result_page'] = array(
+			'title' => 'Results of Shift',
+			'page callback' => 'shifted_phrase',
+			'access callback' => TRUE,
+			'type' =>MENU_CALLBACK,
+	);
+	return $items;
+}
+
+function cipher_form()
+{
+	$form['phrase'] = array(
+		'#title' => 'Phrase',
+		'#type' => 'textfield',
+		'#description' => 'Enter the phrase of which you want the letters shifted:',
+		'#required' => TRUE,
+	);
+	$form['shift'] = array(
+		'#title' => 'Shift Value',
+		'#type' => 'textfield',
+		'#description' => 'Enter the shift value as a positive integer',
+		'#element_validate' => array('element_validate_integer_positive', 'shift_validate_range'),
+		'#required' => TRUE,
+	);
+	$form['direction'] = array(
+		'#title' => 'Direction',
+		'#type' => 'textfield',
+		'#description' => 'Enter the shift direction',
+		'#element_validate' => array('validate_direction'),
+		'#prefix' => '<div id="error_message">',
+		'#suffix' => '</div>',
+		'#required' => TRUE,
+		'#ajax' => array(
+				'event' => 'keyup',
+				'callback' => 'validate_direction_callback',
+		), 
+	);
+	$form['#attached']['js'] = array(
+		array(
+			'type' => 'file',
+			'data' => drupal_get_path('module', 'cipher') . '/js/cipher.js',
+		),
+	);
+	$form['submit'] = array(
+		'#type' => 'submit',
+		'#value' => 'Shift it!',
+	);
+	return $form;
+}
+// fallback direction validation if ajax doesn't work right
+function validate_direction($element){
+	if($element['#value'] != 'left' && $element['#value'] != 'right'){
+		form_error($element, t('Direction must be "left" or "right"'));
+	}
+}
+function shift_validate_range($element)
+{
+	if ($element['#value'] < 0 || $element['#value'] > 25){
+		form_error($element, t('Number must be at least 1 and less than 26.'));
+	}
+}
+/********************************************************
+**                  AJAX CALLBACK                      **
+********************************************************/
+function validate_direction_callback($form, &$form_state){
+	$commands = array();
+	$commands[] = ajax_command_html('#error_message', render($form['direction']));
+	$commands[] = array(
+		'command' => 'validateDirectionCallback',
+		'selectedValue' => $form_state['values']['direction'],
+	);
+	return array('#type' => 'ajax', '#commands' => $commands);
+}
+
+// just changing the submit button css here
+function cipher_form_alter(&$form, $form_state, $form_id)
+{
+	if($form_id =='cipher_form'){
+		$form['submit']['#attributes'] = array(
+			'style' => array('padding: 4px; border: 2px solid black; border-radius: 6px; color: black;'));		
+	}	
+}
+function cipher_form_submit($form, &$form_state){
+	$input = $form_state['values']['phrase'];
+	$shift_value = $form_state['values']['shift'];
+	$direction = $form_state['values']['direction'];
+	$new_phrase = '';
+	$new_chr = '';
+
+	for($i = 0; $i < strlen($input); $i++){
+		$num = ord($input[$i]);
+		if(($num < 65 || ($num > 90 && $num < 97) || $num > 122)){
+			$new_phrase .= $input[$i];
+			continue;
+		}
+		// uppercase shifts, make sure to stay uppercase
+		if($num <= 90){
+			if($direction == 'left'){
+				$num -= $shift_value;
+				if($num < 65){
+					$num += 26;
+				}
+			}else{
+				$num += $shift_value;
+				if($num > 90){
+					$num -= 26;
+				}				
+			}
+		// lowercase shifts, make sure to stay lowercaser
+		}else if($num >= 97){
+			if($direction == 'left'){
+				$num -= $shift_value;
+				if($num < 97){
+					$num += 26;
+				}
+			}else{
+				$num += $shift_value;
+				if($num > 122){
+					$num -= 26;
+				}				
+			}
+		}
+		$new_chr = chr($num);
+		$new_phrase .= $new_chr;		
+	}
+	$_SESSION['phrase'] = $new_phrase;
+	$form_state['redirect'] = 'cipher_result_page';
+}
+function shifted_phrase(){
+	$new_phrase = $_SESSION['phrase'];	
+	return $new_phrase;
+}
