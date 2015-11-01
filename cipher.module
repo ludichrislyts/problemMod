@@ -1,5 +1,7 @@
 <?php
+
 // Class project, a simple module that shifts letters of user input
+
 function cipher_menu()
 {
 	$items = array();
@@ -71,6 +73,7 @@ function shift_validate_range($element)
 		form_error($element, t('Number must be at least 1 and less than 26.'));
 	}
 }
+
 /********************************************************
 **                  AJAX CALLBACK                      **
 ********************************************************/
@@ -92,6 +95,7 @@ function cipher_form_alter(&$form, $form_state, $form_id)
 			'style' => array('padding: 4px; border: 2px solid black; border-radius: 6px; color: black;'));		
 	}	
 }
+
 function cipher_form_submit($form, &$form_state){
 	$input = $form_state['values']['phrase'];
 	$shift_value = $form_state['values']['shift'];
